@@ -1,0 +1,6 @@
+PORT = 8080
+NODE_MODE = development
+MONGO_URL = mongodb+srv://tanmaychamat:6SzOi5IHxbfVHQTd@cluster0.cbzksif.mongodb.net/doctorapp
+JWT_SECRET = XYZGHSJ123
+SENDER_GMAIL = docmate735@gmail.com
+SENDER_GMAIL_PASSCODE = gktq cwxo plge rjtc

@@ -1,0 +1,28 @@
+Name: Tanmay Admin                <- Admin
+Gmail: tanmoy587d@gmail.com    
+Password: 123
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Name: Debjit Roy                  <- Doctor
+Gmail: tanmay.chamat@gmail.com  
+Password: 123D
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Name: Tanmay Patient              <- Patient
+Gmail: tanmoy3011d@gmail.com 
+Password: 123T
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Name: Niloy Adikhary                  <- Doctor
+Gmail: niloycoolpad@gmail.com  
+Password: 1234
+
+Rohit Sen 123 tanmoy.chamat@gmail.com 
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Run Project
+npm run dev
+
+
+client>
+npm start

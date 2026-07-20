@@ -1,0 +1,17 @@
+{
+  "name": "doctor-appointment-system",
+  "version": "1.0.0",
+  "description": "Doctor-Appointment-Application - MERN stack with separated backend and frontend",
+  "private": true,
+  "scripts": {
+    "start": "npm run server",
+    "server": "npm start --prefix server",
+    "server:dev": "npm run dev --prefix server",
+    "client": "npm start --prefix client",
+    "client:build": "npm run build --prefix client",
+    "dev": "concurrently \"npm run server:dev\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
