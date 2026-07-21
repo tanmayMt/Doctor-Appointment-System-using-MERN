@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import axios from "axios";
 import { Card, Spin, message } from "antd";
-import { User, Mail, Phone, Shield, Award } from "lucide-react";
+import { User, Mail, Phone, Shield } from "lucide-react";
 import { API_BASE_URL } from "../config";
 
 const UserProfile = () => {
@@ -83,8 +83,8 @@ const UserProfile = () => {
 
   return (
     <Layout>
-      <div className="page-wrapper" style={{ maxWidth: 640, margin: '0 auto' }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--slate-900)", marginBottom: 28, letterSpacing: '-0.02em' }}>
+      <div className="page-wrapper" style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
+        <h1 className="page-title" style={{ marginBottom: 28 }}>
           My Account
         </h1>
 
@@ -107,7 +107,7 @@ const UserProfile = () => {
           }} />
 
           {/* Profile Header Block */}
-          <div style={{ padding: '0 32px 24px', textAlign: 'center', position: 'relative', marginTop: '-42px' }}>
+          <div className="user-profile-header-block" style={{ padding: '0 clamp(16px, 4vw, 32px) 24px', textAlign: 'center', position: 'relative', marginTop: '-42px' }}>
             <div style={{
               width: '84px',
               height: '84px',
@@ -147,7 +147,7 @@ const UserProfile = () => {
           <hr style={{ border: 0, borderTop: '1px solid var(--slate-150)', margin: 0 }} />
 
           {/* Account Detail Items */}
-          <div style={{ padding: '24px 32px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ padding: '20px clamp(16px, 4vw, 32px) 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div style={{
                 width: '40px',

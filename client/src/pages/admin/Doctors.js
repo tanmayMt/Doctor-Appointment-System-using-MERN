@@ -90,19 +90,26 @@ const Doctors = () => {
     <Layout>
       {/* <h1 className="text-center m-3">All Doctors</h1> */}
       <h1
-        className="text-center m-3"
-        style={{fontFamily: "'Poppins', sans-serif", color: "#2B2B52", fontWeight: "bold", fontSize: "2.5rem", textShadow: "2px 2px 8px rgba(0, 0, 0, 0.2)", letterSpacing: "2px"}}
+        className="text-center m-3 page-title"
+        style={{fontFamily: "'Outfit', sans-serif", color: "#2B2B52", fontWeight: "bold", fontSize: "clamp(1.35rem, 4vw, 1.75rem)", letterSpacing: "-0.02em"}}
       >
         All Doctors
       </h1>
+      <div className="table-scroll">
       <Table
-            style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', // Box shadow for a modern look
-      }}
-      columns={columns} dataSource={doctors} />
+        style={{
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        }}
+        columns={columns}
+        dataSource={doctors}
+        rowKey="_id"
+        scroll={{ x: 720 }}
+        pagination={{ responsive: true }}
+      />
+      </div>
     </Layout>
   );
 };

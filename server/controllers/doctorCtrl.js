@@ -63,7 +63,38 @@ const getDoctorByIdController = async (req, res) => {
 
 const doctorAppointmentsController = async (req, res) => {
   try {
-    const doctor = await doctorModel.findOne({ userId: req.body.userId });
+    const userId = String(req.body.userId || req.userId || "");
+    if (!userId) {
+      return res.status(401).send({
+        success: false,
+        message: "Unauthorized",
+        data: [],
+      });
+    }
+
+    let doctor = await doctorModel.findOne({ userId });
+
+    // Fallback: match by account email (fixes orphaned/mismatched profiles)
+    if (!doctor) {
+      const user = await userModel.findById(userId);
+      if (user?.email) {
+        doctor = await doctorModel.findOne({ email: user.email, status: "approved" });
+        if (doctor && String(doctor.userId) !== userId) {
+          doctor.userId = userId;
+          await doctor.save();
+        }
+      }
+    }
+
+    if (!doctor) {
+      // 200 so the UI can show an empty state instead of a network error
+      return res.status(200).send({
+        success: true,
+        message: "No doctor profile linked to this account",
+        data: [],
+      });
+    }
+
     const appointments = await appointmentModel.find({
       doctorId: doctor._id,
     });
@@ -76,7 +107,7 @@ const doctorAppointmentsController = async (req, res) => {
     console.log(error);
     res.status(500).send({
       success: false,
-      error,
+      error: error.message,
       message: "Error in Doc Appointments",
     });
   }
@@ -94,7 +125,7 @@ const updateStatusController = async (req, res) => {
     notifcation.push({
       type: "status-updated",
       message: `Your Appointment has been updated ${status}`,
-      onCLickPath: "/doctor-appointments",
+      onCLickPath: "/appointments",
     });
     await user.save();
     res.status(200).send({

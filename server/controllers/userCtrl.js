@@ -1,10 +1,20 @@
 const userModel = require("../models/userModels");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-var nodemailer = require('nodemailer');
 const doctorModel = require("../models/doctorModel");
 const appointmentModel = require("../models/appointmentModel");
 const moment = require("moment");
+const {
+  sendWelcomeEmail,
+  sendLoginNotificationEmail,
+  sendBookingConfirmationToPatient,
+  sendNewAppointmentToDoctor,
+  sendAppointmentCancelledEmails,
+  sendAppointmentRescheduledEmails,
+  resolveAppointmentParties,
+  doctorDisplayName,
+  patientDisplayName,
+} = require("../utils/emailService");
 
 //register callback
 const registerController = async (req, res) => {
@@ -22,39 +32,25 @@ const registerController = async (req, res) => {
     const newUser = new userModel(req.body);
     await newUser.save();
 
-      //Send confirmation email
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
-      var transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SENDER_GMAIL,
-          pass: process.env.SENDER_GMAIL_PASSCODE,
-        }
-      });
+    // Welcome email (async — do not block response)
+    sendWelcomeEmail({
+      name: newUser.name,
+      email: newUser.email,
+    });
 
-      var mailOptions = {
-        from: process.env.SENDER_GMAIL,
-        to: req.body.email,
-        subject: 'Registration successful',
-        text: `Hi ${req.body.fname} ${req.body.lname},
-          Welcome to DocMate, your one-stop point to connect with doctors. We hope you a very good health.
-          
-Thanks & Regards,
-Mr. Tanmay Samanta
-Team DocMate`,  
-        // html: '<h1>Hi Smartherd</h1><p>Your Messsage</p>'        
-      };
+    const safeUser = newUser.toObject();
+    delete safeUser.password;
 
-      transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-          console.log(error);
-        } else {
-          console.log('Email sent: ' + info.response);
-        }
-      });
-      //Email code
-
-    res.status(201).send({ message: "Register Sucessfully", success: true });
+    res.status(201).send({
+      message: "Register Successfully",
+      success: true,
+      token,
+      data: safeUser,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).send({
@@ -82,6 +78,13 @@ const loginController = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
+
+    sendLoginNotificationEmail({
+      name: user.name,
+      email: user.email,
+      when: new Date(),
+    });
+
     res.status(200).send({ message: "Login Success", success: true, token });
   } catch (error) {
     console.log(error);
@@ -92,18 +95,17 @@ const loginController = async (req, res) => {
 const authController = async (req, res) => {
   try {
     const user = await userModel.findOne({ _id: req.body.userId });
-    user.password = undefined;
     if (!user) {
       return res.status(200).send({
         message: "user not found",
         success: false,
       });
-    } else {
-      res.status(200).send({
-        success: true,
-        data: user,
-      });
     }
+    user.password = undefined;
+    res.status(200).send({
+      success: true,
+      data: user,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).send({
@@ -135,14 +137,13 @@ const applyDoctorController = async (req, res) => {
       success: true,
       message: "Doctor Account Applied SUccessfully",
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
       error,
       message: "Error While Applying For Doctotr",
-    });    
+    });
   }
 };
 
@@ -230,24 +231,65 @@ const bookeAppointmnetController = async (req, res) => {
         message: "Outside doctor working hours",
       });
     }
-    req.body.date = moment(req.body.date, "DD-MM-YYYY").toISOString();
-    req.body.time = moment(req.body.time, "HH:mm").toISOString();
-    req.body.status = "pending";
-    const newAppointment = new appointmentModel(req.body);
+
+    const dateIso = moment(req.body.date, "DD-MM-YYYY").toISOString();
+    const timeIso = moment(req.body.time, "HH:mm").toISOString();
+
+    // Avoid storing password hashes in appointment snapshots
+    const rawUserInfo = req.body.userInfo || {};
+    const userInfo = {
+      _id: rawUserInfo._id,
+      name: rawUserInfo.name,
+      email: rawUserInfo.email,
+      isDoctor: rawUserInfo.isDoctor,
+      isAdmin: rawUserInfo.isAdmin,
+    };
+
+    const newAppointment = new appointmentModel({
+      ...req.body,
+      userInfo,
+      date: dateIso,
+      time: timeIso,
+      status: "pending",
+    });
     await newAppointment.save();
-    const doctorUserId = req.body.doctorInfo?.userId;
+
+    const doctorUserId = req.body.doctorInfo?.userId || doctor.userId;
     if (doctorUserId) {
-      const user = await userModel.findOne({ _id: doctorUserId });
-      if (user) {
-        if (!user.notifcation) user.notifcation = [];
-        user.notifcation.push({
+      const doctorUser = await userModel.findOne({ _id: doctorUserId });
+      if (doctorUser) {
+        if (!doctorUser.notifcation) doctorUser.notifcation = [];
+        doctorUser.notifcation.push({
           type: "New-appointment-request",
-          message: `A New Appointment Request from ${req.body.userInfo?.name || "a patient"}`,
-          onCLickPath: "/user/appointments",
+          message: `A New Appointment Request from ${userInfo.name || "a patient"}`,
+          onCLickPath: "/doctor-appointments",
         });
-        await user.save();
+        await doctorUser.save();
       }
     }
+
+    const patientName = patientDisplayName(userInfo);
+    const docName = doctorDisplayName(doctor);
+    const patientEmail = userInfo.email;
+    const doctorEmail = doctor.email;
+
+    await Promise.all([
+      sendBookingConfirmationToPatient({
+        patientEmail,
+        patientName,
+        doctorName: docName,
+        date: dateIso,
+        time: timeIso,
+      }),
+      sendNewAppointmentToDoctor({
+        doctorEmail,
+        doctorName: docName,
+        patientName,
+        date: dateIso,
+        time: timeIso,
+      }),
+    ]);
+
     res.status(200).send({
       success: true,
       message: "Appointment Book succesfully",
@@ -262,7 +304,6 @@ const bookeAppointmnetController = async (req, res) => {
   }
 };
 
-// Helper: convert "HH:mm" to minutes since midnight for comparison
 const timeToMinutes = (timeStr) => {
   if (!timeStr) return null;
   const parts = String(timeStr).trim().split(":");
@@ -271,10 +312,9 @@ const timeToMinutes = (timeStr) => {
   return hours * 60 + minutes;
 };
 
-// Helper: check if selected time is within doctor's working hours
 const isWithinWorkingHours = (selectedTime, doctorTimings) => {
   if (!doctorTimings || !Array.isArray(doctorTimings) || doctorTimings.length < 2) {
-    return true; // No timings = allow (backward compatibility)
+    return true;
   }
   const startTime = doctorTimings[0];
   const endTime = doctorTimings[1];
@@ -285,7 +325,6 @@ const isWithinWorkingHours = (selectedTime, doctorTimings) => {
   return selectedMins >= startMins && selectedMins <= endMins;
 };
 
-// booking bookingAvailabilityController
 const bookingAvailabilityController = async (req, res) => {
   try {
     const doctorId = req.body.doctorId;
@@ -297,7 +336,6 @@ const bookingAvailabilityController = async (req, res) => {
         message: "Doctor not found",
       });
     }
-    // Validate working hours first
     if (!isWithinWorkingHours(selectedTime, doctor.timings)) {
       return res.status(200).send({
         success: false,
@@ -378,6 +416,34 @@ const cancelAppointmentController = async (req, res) => {
     }
     appointment.status = "cancelled";
     await appointment.save();
+
+    const parties = await resolveAppointmentParties(
+      appointment,
+      userModel,
+      doctorModel
+    );
+    sendAppointmentCancelledEmails({
+      ...parties,
+      date: appointment.date,
+      time: appointment.time,
+      cancelledBy: "the patient",
+    });
+
+    // Notify doctor in-app
+    const doctor = await doctorModel.findById(appointment.doctorId);
+    if (doctor?.userId) {
+      const doctorUser = await userModel.findById(doctor.userId);
+      if (doctorUser) {
+        if (!doctorUser.notifcation) doctorUser.notifcation = [];
+        doctorUser.notifcation.push({
+          type: "status-updated",
+          message: `Appointment with ${parties.patientName} was cancelled by the patient`,
+          onCLickPath: "/doctor-appointments",
+        });
+        await doctorUser.save();
+      }
+    }
+
     res.status(200).send({
       success: true,
       message: "Appointment cancelled successfully",
@@ -388,6 +454,97 @@ const cancelAppointmentController = async (req, res) => {
       success: false,
       error,
       message: "Error cancelling appointment",
+    });
+  }
+};
+
+const rescheduleAppointmentController = async (req, res) => {
+  try {
+    const { appointmentId, date, time } = req.body;
+    if (!appointmentId || !date || !time) {
+      return res.status(400).send({
+        success: false,
+        message: "appointmentId, date (DD-MM-YYYY), and time (HH:mm) are required",
+      });
+    }
+
+    const appointment = await appointmentModel.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).send({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    const requesterId = String(req.body.userId || req.userId);
+    const doctor = await doctorModel.findById(appointment.doctorId);
+    const isPatient = String(appointment.userId) === requesterId;
+    const isDoctorOwner =
+      doctor && String(doctor.userId) === requesterId;
+
+    if (!isPatient && !isDoctorOwner) {
+      return res.status(403).send({
+        success: false,
+        message: "Not allowed to reschedule this appointment",
+      });
+    }
+
+    if (!isWithinWorkingHours(time, doctor?.timings)) {
+      return res.status(400).send({
+        success: false,
+        message: "Outside doctor working hours",
+      });
+    }
+
+    const oldDate = appointment.date;
+    const oldTime = appointment.time;
+    const newDate = moment(date, "DD-MM-YYYY").toISOString();
+    const newTime = moment(time, "HH:mm").toISOString();
+
+    appointment.date = newDate;
+    appointment.time = newTime;
+    appointment.status = "pending";
+    await appointment.save();
+
+    const parties = await resolveAppointmentParties(
+      appointment,
+      userModel,
+      doctorModel
+    );
+    sendAppointmentRescheduledEmails({
+      ...parties,
+      oldDate,
+      oldTime,
+      newDate,
+      newTime,
+    });
+
+    // In-app notify the other party
+    const notifyUserId = isPatient ? doctor?.userId : appointment.userId;
+    if (notifyUserId) {
+      const other = await userModel.findById(notifyUserId);
+      if (other) {
+        if (!other.notifcation) other.notifcation = [];
+        other.notifcation.push({
+          type: "status-updated",
+          message: `Appointment rescheduled to ${moment(newDate).format("DD-MM-YYYY")} ${moment(newTime).format("HH:mm")}`,
+          onCLickPath: isPatient ? "/doctor-appointments" : "/appointments",
+        });
+        await other.save();
+      }
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Appointment rescheduled successfully",
+      data: appointment,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Error rescheduling appointment",
     });
   }
 };
@@ -404,4 +561,5 @@ module.exports = {
   bookingAvailabilityController,
   userAppointmentsController,
   cancelAppointmentController,
+  rescheduleAppointmentController,
 };

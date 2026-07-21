@@ -77,14 +77,14 @@ const Users = () => {
         background: "linear-gradient(135deg, #ff9a9e, #fad0c4)",
       }}
     >
-      <div style={{ padding: "20px" }}>
+      <div className="admin-users-page" style={{ width: "100%", minWidth: 0 }}>
         <h1
-          className="text-center m-2"
+          className="text-center m-2 page-title"
           style={{
             color: "#00008B", 
             fontWeight: "bold",
-            fontSize: "2rem",
-            textShadow: "8px 2px 4px rgba(0, 0, 0, 0.3)",
+            fontSize: "clamp(1.35rem, 4vw, 1.75rem)",
+            textShadow: "none",
           }}
         >
           Users List
@@ -93,8 +93,10 @@ const Users = () => {
         <Table
           columns={columns}
           dataSource={users}
+          rowKey="_id"
           rowClassName="user-table-row"
-          pagination={{ pageSize: 10 }}
+          scroll={{ x: 640 }}
+          pagination={{ pageSize: 10, responsive: true }}
           bordered
           style={{
             backgroundColor: "#ffffff",

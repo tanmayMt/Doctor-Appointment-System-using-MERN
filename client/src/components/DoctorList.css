@@ -1,126 +1,116 @@
 .doctor-card {
-  background: white;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  background: #fff;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--slate-200);
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.2s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.22s ease;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
 .doctor-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-premium);
-  border-color: rgba(13, 148, 136, 0.25);
+  transform: translateY(-3px);
+  border-color: rgba(13, 148, 136, 0.35);
+  box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.14);
+}
+
+.doctor-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
 .doctor-card-header {
-  padding: 24px;
+  padding: 22px 20px 16px;
   text-align: center;
-  background: linear-gradient(180deg, var(--slate-50) 0%, white 100%);
+  background: linear-gradient(180deg, var(--slate-50) 0%, #fff 100%);
   border-bottom: 1px solid var(--slate-100);
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
-}
-
-.doctor-card-badge {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: var(--primary-light);
-  color: var(--primary);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 9999px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid rgba(13, 148, 136, 0.15);
 }
 
 .doctor-avatar {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-blue-light) 100%);
-  color: var(--primary);
+  background: linear-gradient(145deg, #ccfbf1 0%, #e0f2fe 100%);
+  color: var(--primary-dark);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
-  font-size: 1.5rem;
+  margin-bottom: 14px;
+  font-size: 1.25rem;
   font-weight: 700;
-  border: 3px solid white;
-  box-shadow: var(--shadow-md);
+  letter-spacing: -0.02em;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--slate-200);
 }
 
-.doctor-name-container {
+.doctor-name-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-width: 100%;
 }
 
 .doctor-name {
-  font-size: 1.0625rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--slate-900);
   margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
 
-.doctor-verified-icon {
-  color: var(--primary-blue);
-  display: flex;
-  align-items: center;
+.doctor-verified {
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
 .doctor-specialization {
-  font-size: 0.8125rem;
-  color: var(--primary);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+  font-size: 0.75rem;
+  color: var(--primary-dark);
+  font-weight: 600;
+  letter-spacing: 0.01em;
   background: var(--primary-light);
   padding: 4px 10px;
   border-radius: 8px;
-  margin-top: 4px;
+  border: 1px solid rgba(13, 148, 136, 0.15);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .doctor-card-body {
-  padding: 24px;
+  padding: 16px 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .doctor-detail {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 0.875rem;
+  gap: 10px;
+  font-size: 0.8125rem;
   color: var(--slate-600);
-}
-
-.doctor-detail-icon {
-  color: var(--slate-400);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.doctor-detail span {
   font-weight: 500;
 }
 
+.doctor-detail svg {
+  color: var(--slate-400);
+  flex-shrink: 0;
+}
+
 .doctor-card-footer {
-  padding: 16px 24px;
+  padding: 14px 20px;
   background: var(--slate-50);
   display: flex;
   align-items: center;
@@ -130,21 +120,30 @@
 }
 
 .book-cta {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
-  color: var(--primary-blue);
-  transition: all 0.2s;
+  color: var(--primary);
+  transition: color 0.2s;
 }
 
 .doctor-card:hover .book-cta {
-  color: var(--primary-blue-hover);
+  color: var(--primary-hover);
 }
 
 .doctor-card-footer svg {
-  color: var(--primary-blue);
+  color: var(--primary);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .doctor-card:hover .doctor-card-footer svg {
-  transform: translateX(4px);
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doctor-card,
+  .doctor-card:hover,
+  .doctor-card-footer svg {
+    transition: none;
+    transform: none;
+  }
 }

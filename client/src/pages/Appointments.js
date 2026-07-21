@@ -2,11 +2,10 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Layout from "./../components/Layout";
 import moment from "moment";
-import { Table, Button, Modal, message, Badge } from "antd";
+import { Table, Button, Modal, message, DatePicker, TimePicker } from "antd";
 import { API_BASE_URL } from "../config";
 import {
   Calendar,
-  User,
   Clock,
   MapPin,
   Mail,
@@ -15,10 +14,9 @@ import {
   DollarSign,
   Eye,
   Ban,
-  CheckCircle,
-  AlertCircle,
   FileText,
-  UserCheck
+  UserCheck,
+  CalendarClock
 } from "lucide-react";
 
 const Appointments = () => {
@@ -26,6 +24,11 @@ const Appointments = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState(null);
+  const [rescheduleTime, setRescheduleTime] = useState(null);
+  const [rescheduling, setRescheduling] = useState(false);
 
   const getAppointments = async () => {
     try {
@@ -77,6 +80,51 @@ const Appointments = () => {
       message.error("Failed to cancel appointment");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const openReschedule = (record) => {
+    setRescheduleTarget(record);
+    setRescheduleDate(moment(record.date));
+    setRescheduleTime(moment(record.time));
+    setRescheduleOpen(true);
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleTarget || !rescheduleDate || !rescheduleTime) {
+      message.warning("Please select a new date and time");
+      return;
+    }
+    setRescheduling(true);
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/api/v1/user/reschedule-appointment`,
+        {
+          appointmentId: rescheduleTarget._id,
+          date: rescheduleDate.format("DD-MM-YYYY"),
+          time: rescheduleTime.format("HH:mm"),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (res.data.success) {
+        message.success("Appointment rescheduled — both parties notified by email");
+        setRescheduleOpen(false);
+        setRescheduleTarget(null);
+        getAppointments();
+      } else {
+        message.error(res.data.message || "Failed to reschedule");
+      }
+    } catch (error) {
+      console.log(error);
+      message.error(
+        error.response?.data?.message || "Failed to reschedule appointment"
+      );
+    } finally {
+      setRescheduling(false);
     }
   };
 
@@ -277,17 +325,28 @@ const Appointments = () => {
             Details
           </Button>
           {record.status !== "cancelled" && (
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<Ban size={14} />}
-              loading={cancellingId === record._id}
-              onClick={() => handleCancel(record)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 750 }}
-            >
-              Cancel
-            </Button>
+            <>
+              <Button
+                type="text"
+                size="small"
+                icon={<CalendarClock size={14} />}
+                onClick={() => openReschedule(record)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', fontWeight: 700 }}
+              >
+                Reschedule
+              </Button>
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<Ban size={14} />}
+                loading={cancellingId === record._id}
+                onClick={() => handleCancel(record)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
+              >
+                Cancel
+              </Button>
+            </>
           )}
         </div>
       ),
@@ -297,15 +356,16 @@ const Appointments = () => {
   return (
     <Layout>
       <div className="page-wrapper">
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--slate-900)", marginBottom: 28, letterSpacing: '-0.02em' }}>
+        <h1 className="page-title">
           Appointments History
         </h1>
-        <div className="modern-card" style={{ padding: 24 }}>
+        <div className="modern-card table-scroll">
           <Table
             columns={columns}
             dataSource={appointments}
             rowKey="_id"
-            pagination={{ pageSize: 8, showSizeChanger: true }}
+            scroll={{ x: 800 }}
+            pagination={{ pageSize: 8, showSizeChanger: true, responsive: true }}
             className="premium-table"
           />
         </div>
@@ -320,7 +380,8 @@ const Appointments = () => {
         open={detailsModalOpen}
         onCancel={() => setDetailsModalOpen(false)}
         centered
-        width={500}
+        width="100%"
+        style={{ maxWidth: 500 }}
         footer={[
           <Button key="close" onClick={() => setDetailsModalOpen(false)} style={{ borderRadius: '8px', fontWeight: 600 }}>
             Dismiss
@@ -429,6 +490,50 @@ const Appointments = () => {
             </div>
           );
         })()}
+      </Modal>
+
+      <Modal
+        title="Reschedule appointment"
+        open={rescheduleOpen}
+        onCancel={() => {
+          setRescheduleOpen(false);
+          setRescheduleTarget(null);
+        }}
+        onOk={handleReschedule}
+        confirmLoading={rescheduling}
+        okText="Confirm new time"
+        centered
+        width="100%"
+        style={{ maxWidth: 420 }}
+      >
+        <p style={{ color: "var(--slate-500)", marginBottom: 16, fontSize: "0.875rem" }}>
+          Choose a new date and time. Both you and the doctor will be emailed.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "0.8125rem" }}>
+              New date
+            </label>
+            <DatePicker
+              format="DD-MM-YYYY"
+              value={rescheduleDate}
+              onChange={setRescheduleDate}
+              style={{ width: "100%" }}
+              disabledDate={(current) => current && current < moment().startOf("day")}
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "0.8125rem" }}>
+              New time
+            </label>
+            <TimePicker
+              format="HH:mm"
+              value={rescheduleTime}
+              onChange={setRescheduleTime}
+              style={{ width: "100%" }}
+            />
+          </div>
+        </div>
       </Modal>
     </Layout>
   );

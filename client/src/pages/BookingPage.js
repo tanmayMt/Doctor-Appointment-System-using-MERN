@@ -16,7 +16,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
-  Calendar,
   UserCheck
 } from "lucide-react";
 import "./BookingPage.css";

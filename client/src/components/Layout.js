@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/LayoutStyles.css";
 import { adminMenu, userMenu } from "./../Data/data.js";
 import { Badge, message } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import axios from "axios";
+import { setUser } from "../redux/features/userSlice";
+import { API_BASE_URL } from "../config";
 import {
   Home,
   Calendar,
@@ -17,25 +20,69 @@ import {
   Menu as MenuIcon,
   ChevronLeft,
   ChevronRight,
-  Activity,
-  LayoutGrid
-} from 'lucide-react';
+  LayoutGrid,
+} from "lucide-react";
+
+const BRAND_NAME = "Docmate";
+const BRAND_LOGO = `${process.env.PUBLIC_URL || ""}/doctorAppointment2.ico`;
 
 const Layout = ({ children }) => {
-  const { user } = useSelector(state => state.user);
+  const { user } = useSelector((state) => state.user);
+  const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Session source of truth: JWT. Sidebar only when logged in.
+  const [authToken, setAuthToken] = useState(
+    () => localStorage.getItem("token")
+  );
+  const isAuthenticated = Boolean(authToken);
 
-  // logout function
+  useEffect(() => {
+    const onStorage = () => setAuthToken(localStorage.getItem("token"));
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  useEffect(() => {
+    const hydrateUser = async () => {
+      if (!authToken || user) return;
+      try {
+        const res = await axios.post(
+          `${API_BASE_URL}/api/v1/user/getUserData`,
+          { token: authToken },
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        if (res.data.success) {
+          dispatch(setUser(res.data.data));
+        } else {
+          localStorage.clear();
+          setAuthToken(null);
+          dispatch(setUser(null));
+        }
+      } catch (error) {
+        localStorage.clear();
+        setAuthToken(null);
+        dispatch(setUser(null));
+        console.log(error);
+      }
+    };
+    hydrateUser();
+  }, [authToken, user, dispatch]);
+
   const handleLogout = () => {
     localStorage.clear();
+    setAuthToken(null);
+    dispatch(setUser(null));
     message.success("Logout Successfully");
     navigate("/login");
   };
 
-  // =========== doctor menu ===============
   const doctorMenu = [
     {
       name: "Home",
@@ -54,7 +101,6 @@ const Layout = ({ children }) => {
     },
   ];
 
-  // Map data icons (FontAwesome strings) to Lucide React
   const getMenuIcon = (name) => {
     switch (name) {
       case "Home":
@@ -77,54 +123,62 @@ const Layout = ({ children }) => {
     }
   };
 
-  const guestMenu = [
-    { name: "Home", path: "/", icon: "Home" },
-    { name: "Login", path: "/login", icon: "Login" },
-    { name: "Register", path: "/register", icon: "Register" },
-  ];
+  const SidebarMenu = user?.isAdmin
+    ? adminMenu
+    : user?.isDoctor
+      ? doctorMenu
+      : userMenu;
 
-  const SidebarMenu = user
-    ? user?.isAdmin
-      ? adminMenu
-      : user?.isDoctor
-        ? doctorMenu
-        : userMenu
-    : guestMenu;
-
-  // Resolve user role name for UI
   const getRoleLabel = () => {
     if (user?.isAdmin) return "Admin";
     if (user?.isDoctor) return "Doctor";
     return "Patient";
   };
 
-  // Resolve current page title for breadcrumb
   const getCurrentPageTitle = () => {
-    const activeItem = SidebarMenu.find(item => item.path === location.pathname);
+    const activeItem = SidebarMenu.find(
+      (item) => item.path === location.pathname
+    );
     if (activeItem) return activeItem.name;
-    if (location.pathname.startsWith('/doctor/book-appointment')) return "Book Appointment";
-    if (location.pathname.startsWith('/notification')) return "Notifications";
+    if (location.pathname.startsWith("/doctor/book-appointment"))
+      return "Book Appointment";
+    if (location.pathname.startsWith("/notification")) return "Notifications";
     return "Dashboard";
   };
 
   return (
-    <>
-      <div className="main">
-        <div className="layout">
-          {/* Collapsible Sidebar */}
-          <div className={`sidebar ${collapsed ? "collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
+    <div className="main">
+      <div className={`layout ${isAuthenticated ? "" : "layout--guest"}`}>
+        {isAuthenticated && (
+          <aside
+            className={`sidebar ${collapsed ? "collapsed" : ""} ${
+              mobileOpen ? "mobile-open" : ""
+            }`}
+          >
             <div className="logo">
               <h6>
-                <span className="logo-icon"><Activity size={20} /></span>
-                <span className="logo-text">HealthSync</span>
+                <span className="logo-icon">
+                  <img src={BRAND_LOGO} alt={BRAND_NAME} className="brand-logo-img" />
+                </span>
+                <span className="logo-text">{BRAND_NAME}</span>
               </h6>
               {!collapsed && (
-                <button className="sidebar-toggle" onClick={() => setCollapsed(true)}>
+                <button
+                  type="button"
+                  className="sidebar-toggle"
+                  onClick={() => setCollapsed(true)}
+                  aria-label="Collapse sidebar"
+                >
                   <ChevronLeft size={16} />
                 </button>
               )}
               {collapsed && (
-                <button className="sidebar-toggle" onClick={() => setCollapsed(false)}>
+                <button
+                  type="button"
+                  className="sidebar-toggle"
+                  onClick={() => setCollapsed(false)}
+                  aria-label="Expand sidebar"
+                >
                   <ChevronRight size={16} />
                 </button>
               )}
@@ -133,7 +187,10 @@ const Layout = ({ children }) => {
               {SidebarMenu.map((menu) => {
                 const isActive = location.pathname === menu.path;
                 return (
-                  <div key={menu.path} className={`menu-item ${isActive ? "active" : ""}`}>
+                  <div
+                    key={menu.path}
+                    className={`menu-item ${isActive ? "active" : ""}`}
+                  >
                     <Link to={menu.path} onClick={() => setMobileOpen(false)}>
                       {getMenuIcon(menu.name)}
                       <span className="menu-item-text">{menu.name}</span>
@@ -141,36 +198,62 @@ const Layout = ({ children }) => {
                   </div>
                 );
               })}
-              {user && (
-                <div className="menu-item menu-item-logout" onClick={handleLogout}>
-                  <Link to="/login">
-                    <LogOut size={20} />
-                    <span className="menu-item-text">Logout</span>
-                  </Link>
-                </div>
-              )}
+              <div
+                className="menu-item menu-item-logout"
+                onClick={handleLogout}
+              >
+                <Link to="/login">
+                  <LogOut size={20} />
+                  <span className="menu-item-text">Logout</span>
+                </Link>
+              </div>
             </div>
-          </div>
+          </aside>
+        )}
 
-          {/* Page Content */}
-          <div className={`content ${collapsed ? "expanded" : ""}`}>
-            {/* Sticky Header */}
-            <div className="header">
-              <div className="header-left">
-                <button className="mobile-menu-toggle" onClick={() => setMobileOpen(!mobileOpen)}>
-                  <MenuIcon size={24} />
-                </button>
-                <div className="header-title-container">
-                  <h4>{getCurrentPageTitle()}</h4>
-                  <div className="header-breadcrumbs">
-                    <span>Portal</span> &bull; <span>{getCurrentPageTitle()}</span>
+        {isAuthenticated && mobileOpen && (
+          <button
+            type="button"
+            className="sidebar-backdrop"
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+
+        <div
+          className={`content ${
+            isAuthenticated
+              ? collapsed
+                ? "expanded"
+                : ""
+              : "content--full"
+          }`}
+        >
+          <header className="header">
+            <div className="page-container header__inner">
+            {isAuthenticated ? (
+              <>
+                <div className="header-left">
+                  <button
+                    type="button"
+                    className="mobile-menu-toggle"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    aria-label="Open menu"
+                  >
+                    <MenuIcon size={24} />
+                  </button>
+                  <div className="header-title-container">
+                    <h4>{getCurrentPageTitle()}</h4>
+                    <div className="header-breadcrumbs">
+                      <span>Portal</span> &bull;{" "}
+                      <span>{getCurrentPageTitle()}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="header-right">
-                {user ? (
+                <div className="header-right">
                   <div className="header-actions">
                     <button
+                      type="button"
                       className="header-icon-btn"
                       onClick={() => navigate("/notification")}
                       title="Notifications"
@@ -179,7 +262,15 @@ const Layout = ({ children }) => {
                         <Bell size={20} />
                       </Badge>
                     </button>
-                    <div className="user-profile-menu" onClick={() => navigate("/profile")}>
+                    <div
+                      className="user-profile-menu"
+                      onClick={() => navigate("/profile")}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") navigate("/profile");
+                      }}
+                    >
                       <div className="user-avatar">
                         {user?.name ? user.name[0].toUpperCase() : "U"}
                       </div>
@@ -189,21 +280,35 @@ const Layout = ({ children }) => {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="header-actions">
-                    <Link to="/login" className="ant-btn ant-btn-default" style={{ height: '36px' }}>Login</Link>
-                    <Link to="/register" className="ant-btn ant-btn-primary" style={{ height: '36px' }}>Register</Link>
-                  </div>
-                )}
-              </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link to="/" className="header-brand">
+                  <span className="logo-icon">
+                    <img src={BRAND_LOGO} alt={BRAND_NAME} className="brand-logo-img" />
+                  </span>
+                  <span className="header-brand__name">{BRAND_NAME}</span>
+                </Link>
+                <nav className="header-guest-nav" aria-label="Account">
+                  <Link to="/login" className="header-guest-link">
+                    Login
+                  </Link>
+                  <Link to="/register" className="header-guest-cta">
+                    Register
+                  </Link>
+                </nav>
+              </>
+            )}
             </div>
+          </header>
 
-            {/* Page Body */}
-            <div className="body">{children}</div>
+          <div className={`body ${isAuthenticated ? "" : "body--public"}`}>
+            <div className="page-container">{children}</div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

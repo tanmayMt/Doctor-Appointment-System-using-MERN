@@ -95,7 +95,11 @@ const NotificationPage = () => {
   };
 
   const NotificationCard = ({ notification, isUnread }) => {
-    const path = notification.onCLickPath || notification.onClickPath;
+    let path = notification.onCLickPath || notification.onClickPath;
+    // Old notifications incorrectly pointed patients to doctor appointments
+    if (path === "/doctor-appointments" && user && !user.isDoctor) {
+      path = "/appointments";
+    }
     return (
       <div
         className={`notification-card ${isUnread ? "unread" : ""}`}

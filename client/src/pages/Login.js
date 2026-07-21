@@ -50,7 +50,7 @@ const Login = () => {
   return (
     <div className="form-container">
       <div className="auth-card">
-        <h1>Welcome back</h1>
+        <h1>Welcome to Docmate</h1>
         <p className="auth-subtitle">Sign in to your account to continue</p>
         <Form
           layout="vertical"

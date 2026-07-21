@@ -1,13 +1,20 @@
 /* Auth Pages - Modern Healthcare SaaS */
 .form-container {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: 
+  padding: 16px;
+  background:
     radial-gradient(ellipse 80% 50% at 50% -20%, var(--primary-light) 0%, transparent 50%),
     linear-gradient(180deg, var(--slate-50) 0%, white 100%);
+}
+
+@media (min-width: 768px) {
+  .form-container {
+    padding: 24px;
+  }
 }
 
 .auth-card {
@@ -15,14 +22,20 @@
   max-width: 420px;
   background: white;
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
-  padding: 40px;
+  box-shadow: var(--shadow-premium);
+  padding: 24px 20px;
   border: 1px solid var(--slate-200);
   animation: fadeIn 0.4s ease;
 }
 
+@media (min-width: 480px) {
+  .auth-card {
+    padding: 40px;
+  }
+}
+
 .auth-card h1 {
-  font-size: 1.75rem;
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
   font-weight: 700;
   color: var(--slate-900);
   text-align: center;
@@ -33,7 +46,7 @@
   font-size: 0.9375rem;
   color: var(--slate-500);
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .register-form .ant-form-item-label > label {
@@ -46,6 +59,7 @@
   border-radius: var(--radius-md) !important;
   border-color: var(--slate-200) !important;
   padding: 10px 14px !important;
+  width: 100% !important;
 }
 
 .register-form .ant-input:focus,
@@ -60,6 +74,8 @@
   border-color: var(--primary) !important;
   border-radius: var(--radius-md) !important;
   height: 44px !important;
+  min-height: 44px !important;
+  width: 100% !important;
   font-weight: 600 !important;
 }
 

@@ -3,11 +3,11 @@ import Layout from "./../../components/Layout";
 import axios from "axios";
 import moment from "moment";
 import { message, Table, Button, Modal } from "antd";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config";
 import {
-  Calendar,
   User,
-  Clock,
   Eye,
   CheckCircle,
   XCircle,
@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 const DoctorAppointments = () => {
+  const { user } = useSelector((state) => state.user);
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -29,17 +31,32 @@ const DoctorAppointments = () => {
         },
       });
       if (res.data.success) {
-        setAppointments(res.data.data);
+        setAppointments(res.data.data || []);
+        if (
+          Array.isArray(res.data.data) &&
+          res.data.data.length === 0 &&
+          res.data.message === "No doctor profile linked to this account"
+        ) {
+          message.warning(
+            "No doctor profile for this login. Use a doctor account (e.g. Niloy / Debjit)."
+          );
+        }
       }
     } catch (error) {
       console.log(error);
-      message.error("Failed to load appointments");
+      message.error(
+        error?.response?.data?.message || "Failed to load appointments"
+      );
     }
   };
 
   useEffect(() => {
+    if (user && !user.isDoctor && !user.isAdmin) {
+      navigate("/appointments", { replace: true });
+      return;
+    }
     getAppointments();
-  }, []);
+  }, [user, navigate]);
 
   const handleStatus = async (record, status) => {
     try {
@@ -236,15 +253,16 @@ const DoctorAppointments = () => {
   return (
     <Layout>
       <div className="page-wrapper">
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--slate-900)", marginBottom: 28, letterSpacing: '-0.02em' }}>
+        <h1 className="page-title">
           Consultation Requests
         </h1>
-        <div className="modern-card" style={{ padding: 24 }}>
+        <div className="modern-card table-scroll">
           <Table
             columns={columns}
             dataSource={appointments}
             rowKey="_id"
-            pagination={{ pageSize: 8, showSizeChanger: true }}
+            scroll={{ x: 800 }}
+            pagination={{ pageSize: 8, showSizeChanger: true, responsive: true }}
             className="premium-table"
           />
         </div>
@@ -259,7 +277,8 @@ const DoctorAppointments = () => {
         open={detailsModalOpen}
         onCancel={() => setDetailsModalOpen(false)}
         centered
-        width={500}
+        width="100%"
+        style={{ maxWidth: 500 }}
         footer={<Button onClick={() => setDetailsModalOpen(false)} style={{ borderRadius: '8px', fontWeight: 600 }}>Close</Button>}
       >
         {selectedAppointment && (

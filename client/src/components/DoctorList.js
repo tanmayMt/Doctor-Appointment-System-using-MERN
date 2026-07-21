@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, DollarSign, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Award, IndianRupee, Clock, ArrowRight, BadgeCheck } from "lucide-react";
 import "./DoctorList.css";
 
 const DoctorList = ({ doctor }) => {
@@ -17,53 +17,65 @@ const DoctorList = ({ doctor }) => {
     navigate(`/doctor/book-appointment/${doctor._id}`);
   };
 
-  // Get initials for avatar
   const getInitials = () => {
-    return `${doctor.firstName?.[0] || 'D'}${doctor.lastName?.[0] || 'R'}`.toUpperCase();
+    return `${doctor.firstName?.[0] || "D"}${doctor.lastName?.[0] || "R"}`.toUpperCase();
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleBookAppointment();
+    }
   };
 
   return (
-    <div className="doctor-card" onClick={handleBookAppointment}>
+    <article
+      className="doctor-card"
+      onClick={handleBookAppointment}
+      onKeyDown={onKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Book appointment with Dr. ${doctor.firstName} ${doctor.lastName}, ${doctor.specialization}`}
+    >
       <div className="doctor-card-header">
-        <span className="doctor-card-badge">Verified Expert</span>
-        <div className="doctor-avatar">
+        <div className="doctor-avatar" aria-hidden="true">
           {getInitials()}
         </div>
-        <div className="doctor-name-container">
+        <div className="doctor-name-row">
           <h3 className="doctor-name">
             Dr. {doctor.firstName} {doctor.lastName}
           </h3>
-          <span className="doctor-verified-icon">
-            <CheckCircle2 size={16} fill="var(--primary-blue)" color="white" />
-          </span>
+          <BadgeCheck
+            size={18}
+            className="doctor-verified"
+            aria-label="Verified"
+          />
         </div>
         <span className="doctor-specialization">{doctor.specialization}</span>
       </div>
+
       <div className="doctor-card-body">
         <div className="doctor-detail">
-          <div className="doctor-detail-icon">
-            <Award size={18} />
-          </div>
-          <span>{doctor.experience} years experience</span>
+          <Award size={16} aria-hidden="true" />
+          <span>{doctor.experience} yrs experience</span>
         </div>
         <div className="doctor-detail">
-          <div className="doctor-detail-icon">
-            <DollarSign size={18} />
-          </div>
-          <span>₹{doctor.feesPerCunsaltation} per consultation</span>
+          <IndianRupee size={16} aria-hidden="true" />
+          <span>₹{doctor.feesPerCunsaltation} consultation</span>
         </div>
         <div className="doctor-detail">
-          <div className="doctor-detail-icon">
-            <Clock size={18} />
-          </div>
-          <span>{doctor.timings?.[0]} - {doctor.timings?.[1]}</span>
+          <Clock size={16} aria-hidden="true" />
+          <span>
+            {doctor.timings?.[0]} – {doctor.timings?.[1]}
+          </span>
         </div>
       </div>
+
       <div className="doctor-card-footer">
-        <span className="book-cta">Book Appointment</span>
-        <ArrowRight size={16} />
+        <span className="book-cta">Book appointment</span>
+        <ArrowRight size={16} aria-hidden="true" />
       </div>
-    </div>
+    </article>
   );
 };
 
